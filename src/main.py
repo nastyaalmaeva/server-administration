@@ -1,15 +1,53 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src import models, schemas
 from src.database import init_db, get_db
 
-app = FastAPI()
+
+INDEX_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KUBSU User API</title>
+</head>
+<body>
+    <h1>Welcome to KUBSU User API!</h1>
+    <p>For full API interface visit <a href="/docs" target="_blank">Swagger UI</a> or <a href="/redoc" target="_blank">ReDoc</a>.</p>
+</body>
+</html>
+"""
 
 
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting KubSU API")
     await init_db()
+    yield
+
+
+app = FastAPI(
+    title="KubSU API",
+    description="CRUD",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy", 
+        "service": "kubsu-api",
+        "version": "1.0.0",
+        "message": "All systems operational!"
+    }
+
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    return HTMLResponse(content=INDEX_HTML, status_code=200)
 
 
 @app.post("/users/", response_model=schemas.User)
